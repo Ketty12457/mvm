@@ -61,6 +61,7 @@ type TraceConfig struct {
 	Tracer  *string
 	Timeout *string
 	Reexec  *uint64
+	Cached  *bool
 }
 
 // StdTraceConfig holds extra parameters to standard-json trace functions.
@@ -728,6 +729,14 @@ func (api *PrivateDebugAPI) TraceTransaction(ctx context.Context, hash common.Ha
 	if tx == nil {
 		return nil, fmt.Errorf("transaction %#x not found", hash)
 	}
+
+	// Retrieve transaction trace from cache server for performace
+	if config != nil && config.Cached != nil && *config.Cached {
+		if CACHED_EDNPOINT := os.Getenv("GETH_TRACER_CACHED_ENDPOINT"); CACHED_EDNPOINT != "" {
+			return RequestTxTraceCache(ctx, CACHED_EDNPOINT, api.eth.blockchain.Config().ChainID, hash)
+		}
+	}
+
 	reexec := defaultTraceReexec
 	if config != nil && config.Reexec != nil {
 		reexec = *config.Reexec
